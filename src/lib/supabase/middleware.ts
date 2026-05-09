@@ -55,5 +55,14 @@ export async function updateSession(request: NextRequest) {
     return applySecurityHeaders(NextResponse.redirect(url));
   }
 
+  if (request.nextUrl.pathname.startsWith("/owner") && user) {
+    const { data: isOwner } = await supabase.rpc("is_platform_owner");
+    if (!isOwner) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return applySecurityHeaders(NextResponse.redirect(url));
+    }
+  }
+
   return applySecurityHeaders(response);
 }

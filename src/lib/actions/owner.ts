@@ -1,28 +1,39 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
-import { sanitizeText } from "@/lib/security";
 import { createClient } from "@/lib/supabase/server";
-import { toUserError } from "@/lib/task-workflow";
 
-const codeSchema = z.object({
-  registrationCode: z.string().regex(/^\d{10}$/),
-  notes: z.string().transform((value) => sanitizeText(value, 160)).optional()
-});
+export async function toggleFirmStatus(firmId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("toggle_firm_status", { target_firm_id: firmId });
+  if (error) {
+    console.error("Failed to toggle firm status", error);
+    return { error: error.message };
+  }
+
+  revalidatePath("/owner");
+  return { success: true };
+}
 
 export async function createRegistrationCode(_: unknown, formData: FormData) {
-  const parsed = codeSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: "Enter a unique 10-digit code." };
+  const code = formData.get("registrationCode")?.toString();
+  const notes = formData.get("notes")?.toString();
+
+  if (!code || !/^\d{10}$/.test(code)) {
+    return { error: "Registration code must be exactly 10 digits." };
+  }
 
   const supabase = createClient();
   const { error } = await supabase.rpc("create_registration_code", {
-    registration_code: parsed.data.registrationCode,
-    notes: parsed.data.notes || null
+    registration_code: code,
+    notes: notes || null
   });
 
-  if (error) return { error: toUserError(error) };
+  if (error) {
+    console.error("Failed to create registration code", error);
+    return { error: "Failed to create registration code. Ensure it is unique." };
+  }
 
   revalidatePath("/owner");
-  return { error: "" };
+  return { success: true };
 }

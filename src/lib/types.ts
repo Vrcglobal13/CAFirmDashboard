@@ -20,6 +20,7 @@ export type Firm = {
   phone: string | null;
   email: string | null;
   registration_code: string | null;
+  is_active: boolean;
   created_at: string;
 };
 
@@ -30,6 +31,7 @@ export type OwnerFirmSummary = {
   phone: string | null;
   email: string | null;
   registration_code: string | null;
+  is_active: boolean;
   created_at: string;
   tasks_count: number;
   partners_count: number;
