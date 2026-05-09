@@ -756,3 +756,56 @@ grant execute on function public.create_team_member_profile(text, text, text, te
 grant execute on function public.current_firm_id() to authenticated;
 grant execute on function public.current_app_role() to authenticated;
 grant execute on function public.is_platform_owner() to authenticated;
+
+create table if not exists public.register_otps (
+  email text primary key,
+  otp text not null,
+  expires_at timestamptz not null
+);
+
+grant all on public.register_otps to anon, authenticated, service_role;
+
+create or replace function public.create_partner_profile(
+  p_registration_code text,
+  p_full_name text,
+  p_member_mobile text
+)
+returns public.users
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_firm_id uuid;
+  profile public.users;
+begin
+  if auth.uid() is null then
+    raise exception 'Must be authenticated';
+  end if;
+
+  if exists (select 1 from public.users where id = auth.uid()) then
+    raise exception 'Profile already exists';
+  end if;
+
+  if p_registration_code !~ '^[0-9]{10}$' then
+    raise exception 'Registration code must be exactly 10 digits';
+  end if;
+
+  select id
+  into target_firm_id
+  from public.firms
+  where firms.registration_code = p_registration_code;
+
+  if target_firm_id is null then
+    raise exception 'Invalid registration code';
+  end if;
+
+  insert into public.users(id, firm_id, name, role, mobile)
+  values (auth.uid(), target_firm_id, p_full_name, 'partner', p_member_mobile)
+  returning * into profile;
+
+  return profile;
+end;
+$$;
+
+grant execute on function public.create_partner_profile(text, text, text) to authenticated;
