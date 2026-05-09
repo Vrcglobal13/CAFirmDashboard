@@ -809,3 +809,8 @@ end;
 $$;
 
 grant execute on function public.create_partner_profile(text, text, text) to authenticated;
+CREATE POLICY "Allow anon insert" ON "public"."register_otps" AS PERMISSIVE FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "Allow anon update" ON "public"."register_otps" AS PERMISSIVE FOR UPDATE TO anon USING (true);
+CREATE POLICY "Allow anon select" ON "public"."register_otps" AS PERMISSIVE FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow anon delete" ON "public"."register_otps" AS PERMISSIVE FOR DELETE TO anon USING (true);
+alter table public.register_otps enable row level security;
