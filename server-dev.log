@@ -1,0 +1,52 @@
+
+> ca-firm-os@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 4.6s
+ ○ Compiling /login ...
+ ✓ Compiled /login in 8.9s (609 modules)
+ GET /login 200 in 9250ms
+ GET /login 200 in 9458ms
+ GET /login 200 in 124ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 4.8s (957 modules)
+ POST /login 303 in 8736ms
+ ○ Compiling /onboarding ...
+ ✓ Compiled /onboarding in 611ms (950 modules)
+ GET /login 200 in 233ms
+ ○ Compiling / ...
+ ✓ Compiled / in 937ms (954 modules)
+ GET / 307 in 1180ms
+ GET /dashboard 307 in 166ms
+ GET /login 200 in 86ms
+ POST /login 303 in 912ms
+ POST /onboarding 200 in 2013ms
+ GET /login 200 in 73ms
+ ○ Compiling /owner ...
+ ✓ Compiled /owner in 2s (860 modules)
+ GET /owner 200 in 3412ms
+ POST /owner 200 in 1227ms
+ GET /login 200 in 81ms
+ POST /login 200 in 4645ms
+ ○ Compiling / ...
+ ✓ Compiled / in 566ms (532 modules)
+ GET / 307 in 808ms
+ GET / 307 in 73ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 720ms (647 modules)
+ GET /dashboard 200 in 1122ms
+ GET /login 200 in 83ms
+ GET /login 200 in 69ms
+ POST /login 200 in 2171ms
+ POST /login 200 in 390ms
+ POST /login 200 in 169ms
+ GET /owner 200 in 3406ms
+ POST /owner 303 in 736ms
+ GET /owner 307 in 131ms
+ GET /login?next=/owner 200 in 97ms
+ POST /login?next=/owner 303 in 1295ms

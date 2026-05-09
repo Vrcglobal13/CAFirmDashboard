@@ -1,0 +1,9 @@
+{
+  "framework": "nextjs",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "regions": ["bom1"],
+  "env": {
+    "NEXT_PUBLIC_SITE_URL": "https://your-domain.example"
+  }
+}
