@@ -21,6 +21,8 @@ create table public.owner_users (
 
 create table public.registration_codes (
   code text primary key check (code ~ '^[0-9]{10}$'),
+  is_active boolean not null default true,
+  expires_at timestamptz,
   firm_id uuid unique references public.firms(id) on delete set null,
   created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -582,7 +584,7 @@ create trigger notifications_set_read_at
 before update on public.notifications
 for each row execute function public.set_notification_read_at();
 
-create or replace function public.create_registration_code(registration_code text, notes text default null)
+create or replace function public.create_registration_code(registration_code text, notes text default null, p_expires_at timestamptz default null)
 returns public.registration_codes
 language plpgsql
 security definer
@@ -599,9 +601,10 @@ begin
     raise exception 'Registration code must be exactly 10 digits';
   end if;
 
-  insert into public.registration_codes(code, created_by, notes)
-  values (registration_code, auth.uid(), nullif(trim(notes), ''))
+  insert into public.registration_codes(code, created_by, notes, expires_at)
+  values (registration_code, auth.uid(), nullif(trim(notes), ''), p_expires_at)
   returning * into new_code;
+  insert into public.audit_logs(action, details, user_id) values ('registration_code_created', jsonb_build_object('code', registration_code, 'expires_at', p_expires_at), auth.uid());
 
   return new_code;
 end;
@@ -683,6 +686,14 @@ begin
     raise exception 'Invalid registration code';
   end if;
 
+  if not invite.is_active then
+    raise exception 'Registration code is deactivated';
+  end if;
+
+  if invite.expires_at is not null and invite.expires_at < now() then
+    raise exception 'Registration code has expired';
+  end if;
+
   if invite.used_at is not null or invite.firm_id is not null then
     raise exception 'Registration code has already been used';
   end if;
@@ -695,6 +706,7 @@ begin
   set firm_id = new_firm_id, used_at = now()
   where code = registration_code;
 
+  insert into public.audit_logs(action, details, user_id) values ('firm_status_toggled', jsonb_build_object('firm_id', new_firm_id, 'new_status', true), auth.uid());
   insert into public.users(id, firm_id, name, role)
   values (auth.uid(), new_firm_id, full_name, 'admin')
   returning * into profile;
@@ -734,6 +746,11 @@ begin
   into target_firm_id
   from public.firms
   where firms.registration_code = p_registration_code;
+
+  if not exists (select 1 from public.registration_codes rc join public.firms f on rc.firm_id = f.id where rc.code = p_registration_code and rc.is_active = true and (rc.expires_at is null or rc.expires_at > now())) then
+    raise exception 'Registration code is invalid, expired, or deactivated';
+  end if;
+
 
   if target_firm_id is null then
     raise exception 'Invalid registration code';
@@ -796,6 +813,11 @@ begin
   from public.firms
   where firms.registration_code = p_registration_code;
 
+  if not exists (select 1 from public.registration_codes rc join public.firms f on rc.firm_id = f.id where rc.code = p_registration_code and rc.is_active = true and (rc.expires_at is null or rc.expires_at > now())) then
+    raise exception 'Registration code is invalid, expired, or deactivated';
+  end if;
+
+
   if target_firm_id is null then
     raise exception 'Invalid registration code';
   end if;
@@ -814,3 +836,50 @@ CREATE POLICY "Allow anon update" ON "public"."register_otps" AS PERMISSIVE FOR 
 CREATE POLICY "Allow anon select" ON "public"."register_otps" AS PERMISSIVE FOR SELECT TO anon USING (true);
 CREATE POLICY "Allow anon delete" ON "public"."register_otps" AS PERMISSIVE FOR DELETE TO anon USING (true);
 alter table public.register_otps enable row level security;
+
+create or replace function public.toggle_registration_code_status(p_code text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_status boolean;
+  new_status boolean;
+begin
+  if not public.is_platform_owner() then
+    raise exception 'Only the platform owner can toggle code status';
+  end if;
+
+  select is_active into current_status
+  from public.registration_codes
+  where code = p_code;
+
+  if current_status is null then
+    raise exception 'Registration code not found';
+  end if;
+
+  new_status := not current_status;
+
+  update public.registration_codes
+  set is_active = new_status
+  where code = p_code;
+
+  insert into public.audit_logs(action, details, user_id) values ('registration_code_toggled', jsonb_build_object('code', p_code, 'new_status', new_status), auth.uid());
+  return new_status;
+end;
+$$;
+grant execute on function public.toggle_registration_code_status(text) to authenticated;
+
+create table if not exists public.audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  action text not null,
+  details jsonb,
+  user_id uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.audit_logs enable row level security;
+create policy "owners can read audit logs"
+on public.audit_logs for select
+using (public.is_platform_owner());

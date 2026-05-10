@@ -23,6 +23,8 @@ create table if not exists public.owner_users (
 
 create table if not exists public.registration_codes (
   code text primary key check (code ~ '^[0-9]{10}$'),
+  is_active boolean not null default true,
+  expires_at timestamptz,
   firm_id uuid unique references public.firms(id) on delete set null,
   created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -62,7 +64,7 @@ create policy "owners can create registration codes"
 on public.registration_codes for insert
 with check (public.is_platform_owner() and created_by = auth.uid());
 
-create or replace function public.create_registration_code(registration_code text, notes text default null)
+create or replace function public.create_registration_code(registration_code text, notes text default null, p_expires_at timestamptz default null)
 returns public.registration_codes
 language plpgsql
 security definer
@@ -79,9 +81,10 @@ begin
     raise exception 'Registration code must be exactly 10 digits';
   end if;
 
-  insert into public.registration_codes(code, created_by, notes)
-  values (registration_code, auth.uid(), nullif(trim(notes), ''))
+  insert into public.registration_codes(code, created_by, notes, expires_at)
+  values (registration_code, auth.uid(), nullif(trim(notes), ''), p_expires_at)
   returning * into new_code;
+  insert into public.audit_logs(action, details, user_id) values ('registration_code_created', jsonb_build_object('code', registration_code, 'expires_at', p_expires_at), auth.uid());
 
   return new_code;
 end;
@@ -161,6 +164,14 @@ begin
 
   if invite.code is null then
     raise exception 'Invalid registration code';
+  end if;
+
+  if not invite.is_active then
+    raise exception 'Registration code is deactivated';
+  end if;
+
+  if invite.expires_at is not null and invite.expires_at < now() then
+    raise exception 'Registration code has expired';
   end if;
 
   if invite.used_at is not null or invite.firm_id is not null then

@@ -24,6 +24,14 @@ export type Firm = {
   created_at: string;
 };
 
+export type AuditLog = {
+  id: string;
+  action: string;
+  details: any;
+  user_id: string | null;
+  created_at: string;
+};
+
 export type OwnerFirmSummary = {
   firm_id: string;
   firm_name: string;
@@ -46,6 +54,8 @@ export type RegistrationCode = {
   created_at: string;
   used_at: string | null;
   notes: string | null;
+  is_active: boolean;
+  expires_at: string | null;
 };
 
 export type Client = {

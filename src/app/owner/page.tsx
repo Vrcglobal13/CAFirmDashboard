@@ -4,7 +4,7 @@ import { getOwnerDashboardData } from "@/lib/data";
 import { OwnerDashboardClient } from "@/components/owner/OwnerDashboardClient";
 
 export default async function OwnerDashboardPage() {
-  const { firms, codes, user } = await getOwnerDashboardData();
+  const { firms, codes, auditLogs, user } = await getOwnerDashboardData();
 
   return (
     <main className="min-h-screen bg-background">
@@ -34,7 +34,7 @@ export default async function OwnerDashboardPage() {
         </div>
       </header>
 
-      <OwnerDashboardClient firms={firms} codes={codes} />
+      <OwnerDashboardClient firms={firms} codes={codes} auditLogs={auditLogs} />
     </main>
   );
 }

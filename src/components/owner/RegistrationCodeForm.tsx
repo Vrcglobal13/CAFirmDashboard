@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, StickyNote } from "lucide-react";
+import { KeyRound, StickyNote, Calendar } from "lucide-react";
 import { useFormState } from "react-dom";
 import { createRegistrationCode } from "@/lib/actions/owner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -30,6 +30,13 @@ export function RegistrationCodeForm() {
               placeholder="1234567890"
               required
             />
+          </span>
+        </label>
+        <label className="block text-sm font-medium">
+          Expires At (Optional)
+          <span className="relative mt-1 block">
+            <Calendar className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+            <input name="expiresAt" type="date" className="field pl-9" />
           </span>
         </label>
         <label className="block text-sm font-medium">

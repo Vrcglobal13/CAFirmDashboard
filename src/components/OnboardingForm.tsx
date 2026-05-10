@@ -33,7 +33,7 @@ export function OnboardingForm() {
       </label>
 
       <label className="block text-sm font-medium">
-        10-digit registration code
+        {role === "new_firm" ? "10-digit registration code" : "10-digit organisation code"}
         <input
           name="registrationCode"
           className="field mt-1"

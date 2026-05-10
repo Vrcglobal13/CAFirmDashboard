@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { buildEmployeePerformance, buildTaskReport, filterTasks, type ReportFilters } from "@/lib/reports";
-import type { Attendance, Notification, OwnerFirmSummary, Profile, RegistrationCode, TaskWithRelations } from "@/lib/types";
+import type { Attendance, Notification, OwnerFirmSummary, Profile, RegistrationCode, TaskWithRelations, AuditLog } from "@/lib/types";
 
 export async function getSessionContext() {
   const supabase = createClient();
@@ -172,14 +172,16 @@ export async function getOwnerDashboardData() {
   const { data: isOwner } = await supabase.rpc("is_platform_owner");
   if (!isOwner) redirect("/dashboard");
 
-  const [summariesResult, codesResult] = await Promise.all([
+  const [summariesResult, codesResult, logsResult] = await Promise.all([
     supabase.rpc("get_owner_firm_summaries"),
-    supabase.from("registration_codes").select("*").order("created_at", { ascending: false }).limit(100)
+    supabase.from("registration_codes").select("*").order("created_at", { ascending: false }).limit(100),
+    supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(50)
   ]);
 
   return {
     user,
     firms: (summariesResult.data ?? []) as OwnerFirmSummary[],
-    codes: (codesResult.data ?? []) as RegistrationCode[]
+    codes: (codesResult.data ?? []) as RegistrationCode[],
+    auditLogs: (logsResult.data ?? []) as AuditLog[]
   };
 }

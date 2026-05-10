@@ -34,6 +34,10 @@ begin
   from public.firms
   where firms.registration_code = p_registration_code;
 
+  if not exists (select 1 from public.registration_codes rc join public.firms f on rc.firm_id = f.id where rc.code = p_registration_code and rc.is_active = true and (rc.expires_at is null or rc.expires_at > now())) then
+    raise exception 'Registration code is invalid, expired, or deactivated';
+  end if;
+
   if target_firm_id is null then
     raise exception 'Invalid registration code';
   end if;

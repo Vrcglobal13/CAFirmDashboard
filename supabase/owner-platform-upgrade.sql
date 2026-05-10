@@ -29,6 +29,7 @@ begin
   set is_active = new_status
   where id = target_firm_id;
 
+  insert into public.audit_logs(action, details, user_id) values ('firm_status_toggled', jsonb_build_object('firm_id', target_firm_id, 'new_status', new_status), auth.uid());
   return new_status;
 end;
 $$;
@@ -76,3 +77,50 @@ as $$
   group by f.id, f.name, f.address, f.phone, f.email, f.registration_code, f.created_at, f.is_active
   order by f.created_at desc
 $$;
+
+create or replace function public.toggle_registration_code_status(p_code text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_status boolean;
+  new_status boolean;
+begin
+  if not public.is_platform_owner() then
+    raise exception 'Only the platform owner can toggle code status';
+  end if;
+
+  select is_active into current_status
+  from public.registration_codes
+  where code = p_code;
+
+  if current_status is null then
+    raise exception 'Registration code not found';
+  end if;
+
+  new_status := not current_status;
+
+  update public.registration_codes
+  set is_active = new_status
+  where code = p_code;
+
+  insert into public.audit_logs(action, details, user_id) values ('registration_code_toggled', jsonb_build_object('code', p_code, 'new_status', new_status), auth.uid());
+  return new_status;
+end;
+$$;
+grant execute on function public.toggle_registration_code_status(text) to authenticated;
+
+create table if not exists public.audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  action text not null,
+  details jsonb,
+  user_id uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.audit_logs enable row level security;
+create policy "owners can read audit logs"
+on public.audit_logs for select
+using (public.is_platform_owner());

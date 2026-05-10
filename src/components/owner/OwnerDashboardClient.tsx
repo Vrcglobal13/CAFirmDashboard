@@ -19,15 +19,19 @@ import {
   UserPlus
 } from "lucide-react";
 import { RegistrationCodeForm } from "@/components/owner/RegistrationCodeForm";
-import type { OwnerFirmSummary, RegistrationCode } from "@/lib/types";
-import { toggleFirmStatus } from "@/lib/actions/owner";
+import type { OwnerFirmSummary, RegistrationCode, AuditLog } from "@/lib/types";
+import { toggleFirmStatus, toggleRegistrationCodeStatus } from "@/lib/actions/owner";
 
 type OwnerDashboardClientProps = {
+  auditLogs?: AuditLog[];
   firms: OwnerFirmSummary[];
   codes: RegistrationCode[];
 };
 
-export function OwnerDashboardClient({ firms, codes }: OwnerDashboardClientProps) {
+export function OwnerDashboardClient({ firms, codes, auditLogs = [] }: OwnerDashboardClientProps) {
+  const handleToggleCodeStatus = async (code: string) => {
+    await toggleRegistrationCodeStatus(code);
+  };
   const [activeTab, setActiveTab] = useState("dashboard");
 
   const issuedCodes = codes.length;
@@ -219,9 +223,20 @@ export function OwnerDashboardClient({ firms, codes }: OwnerDashboardClientProps
                 </span>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">{code.notes || "No note"}</p>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <div className="mt-2 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">
                 Created {new Date(code.created_at).toLocaleDateString()}
-              </p>
+                    {code.expires_at ? ` · Expires ${new Date(code.expires_at).toLocaleDateString()}` : ""}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleToggleCodeStatus(code.code)}
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  {code.is_active ? "Deactivate" : "Activate"}
+                </button>
+              </div>
             </div>
           ))}
           {codes.length === 0 ? <p className="p-5 text-sm text-muted-foreground">No codes created.</p> : null}
@@ -254,8 +269,17 @@ export function OwnerDashboardClient({ firms, codes }: OwnerDashboardClientProps
     <div className="panel p-5">
       <h2 className="text-lg font-semibold mb-4">Support & Audit Logs</h2>
       <p className="text-sm text-muted-foreground mb-4">View recent system activity and support tickets.</p>
-      <div className="rounded-lg border bg-muted/10 h-64 flex items-center justify-center text-muted-foreground text-sm">
-        Log viewer component will be integrated here.
+      <div className="max-h-[480px] divide-y divide-border overflow-y-auto rounded-lg border bg-background">
+        {auditLogs.map((log) => (
+          <div key={log.id} className="p-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold">{log.action}</span>
+              <span className="text-xs text-muted-foreground">{new Date(log.created_at).toLocaleString()}</span>
+            </div>
+            <pre className="mt-2 text-xs text-muted-foreground bg-muted p-2 rounded overflow-x-auto">{JSON.stringify(log.details, null, 2)}</pre>
+          </div>
+        ))}
+        {auditLogs.length === 0 ? <p className="p-5 text-sm text-muted-foreground">No audit logs found.</p> : null}
       </div>
     </div>
   );
